@@ -6,10 +6,20 @@ import {
   blackGamma,
   blackScholes,
   blackScholesDelta,
+  blackScholesGamma,
   blackScholesImpliedVolatility,
   blackScholesMerton,
   blackScholesMertonDelta,
+  blackScholesMertonGamma,
   blackScholesMertonImpliedVolatility,
+  blackScholesMertonRho,
+  blackScholesMertonTheta,
+  blackScholesMertonVega,
+  blackScholesRho,
+  blackScholesTheta,
+  blackScholesVega,
+  blackRho,
+  blackTheta,
   blackVega,
   d1,
   d2,
@@ -80,7 +90,7 @@ test("canonical Black-Scholes-Merton doctest examples from py_vollib and Haug", 
   close(blackScholesMertonImpliedVolatility(price, 100, 100, 0.5, 0.01, 0, "c"), 0.2, 1e-5);
 });
 
-test("canonical Greek doctest examples currently exposed by vollib-ts", () => {
+test("canonical Black Greek doctest examples from py_vollib", () => {
   const S = 49;
   const K = 50;
   const r = 0.05;
@@ -93,4 +103,57 @@ test("canonical Greek doctest examples currently exposed by vollib-ts", () => {
   close(blackDelta("c", S, K, t, r, sigma), 0.45107017482201828, 1e-6);
   close(blackGamma(S, K, t, r, sigma), 0.0640646705882, 1e-6);
   close(blackVega(S, K, t, r, sigma), 0.118317785624, 1e-6);
+  close(blackTheta("c", S, K, t, r, sigma), -0.00816236877462, 1e-6);
+  close(blackTheta("p", S, K, t, r, sigma), -0.00802799155312, 1e-6);
+  close(blackRho("c", S, K, t, r, sigma), -0.0074705380059582258, 1e-6);
+  close(blackRho("p", S, K, t, r, sigma), -0.011243286001308292, 1e-6);
+});
+
+test("canonical Black-Scholes Greek examples from Hull", () => {
+  const S = 49;
+  const K = 50;
+  const r = 0.05;
+  const t = 0.3846;
+  const sigma = 0.2;
+
+  close(blackScholesDelta("c", S, K, t, r, sigma), 0.522, 0.01);
+  close(blackScholesTheta("c", S, K, t, r, sigma) * 365, -4.31, 0.01);
+  close(blackScholesTheta("p", S, K, t, r, sigma) * 365, -1.8530056722, 1e-6);
+  close(blackScholesGamma(S, K, t, r, sigma), 0.066, 0.001);
+  close(blackScholesVega(S, K, t, r, sigma), 0.121, 0.01);
+  close(blackScholesRho("c", S, K, t, r, sigma), 0.0891, 0.0001);
+});
+
+test("canonical Black-Scholes-Merton Greek examples from Hull", () => {
+  const S = 49;
+  const K = 50;
+  const r = 0.05;
+  const t = 0.3846;
+  const sigma = 0.2;
+  const q = 0;
+
+  close(blackScholesMertonDelta("c", S, K, t, r, sigma, q), 0.522, 0.01);
+  close(blackScholesMertonTheta("c", S, K, t, r, sigma, q) * 365, -4.31, 0.01);
+  close(blackScholesMertonTheta("p", S, K, t, r, sigma, q) * 365, -1.8530056722, 1e-6);
+  close(blackScholesMertonGamma(S, K, t, r, sigma, q), 0.066, 0.001);
+  close(blackScholesMertonVega(S, K, t, r, sigma, q), 0.121, 0.01);
+  close(blackScholesMertonRho("c", S, K, t, r, sigma, q), 0.0891, 0.0001);
+});
+
+test("Black-Scholes-Merton Greeks match py_vollib with nonzero dividend yield", () => {
+  const S = 100;
+  const K = 95;
+  const r = 0.1;
+  const t = 0.5;
+  const sigma = 0.2;
+  const q = 0.05;
+
+  close(blackScholesMertonDelta("c", S, K, t, r, sigma, q), 0.71112831239226, 1e-12);
+  close(blackScholesMertonDelta("p", S, K, t, r, sigma, q), -0.2641815996360726, 1e-12);
+  close(blackScholesMertonTheta("c", S, K, t, r, sigma, q), -0.019618241284967603, 1e-12);
+  close(blackScholesMertonTheta("p", S, K, t, r, sigma, q), -0.008220624921638506, 1e-12);
+  close(blackScholesMertonGamma(S, K, t, r, sigma, q), 0.022839574296269996, 1e-12);
+  close(blackScholesMertonVega(S, K, t, r, sigma, q), 0.2283957429627, 1e-12);
+  close(blackScholesMertonRho("c", S, K, t, r, sigma, q), 0.3074192385860237, 1e-12);
+  close(blackScholesMertonRho("p", S, K, t, r, sigma, q), -0.1444147380518154, 1e-12);
 });
