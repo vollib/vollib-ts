@@ -28,14 +28,18 @@
     }
   },
   "files": [
-    "dist"
+    "dist/src"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/vollib/vollib-ts.git"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "test": "npm run build && node --test dist/test/*.test.js"
   },
   "dependencies": {
-    "lets-be-rational": "file:../lets-be-rational-ts"
+    "lets-be-rational": "^0.1.0"
   },
   "devDependencies": {
     "@types/node": "^20.11.30",
