@@ -25,6 +25,7 @@ import {
   d2,
   impliedVolatilityOfDiscountedOptionPrice,
   impliedVolatilityOfUndiscountedOptionPrice,
+  numericalDelta,
   normalisedBlack,
   normalisedImpliedVolatility,
   undiscountedBlack
@@ -156,4 +157,44 @@ test("Black-Scholes-Merton Greeks match py_vollib with nonzero dividend yield", 
   close(blackScholesMertonVega(S, K, t, r, sigma, q), 0.2283957429627, 1e-12);
   close(blackScholesMertonRho("c", S, K, t, r, sigma, q), 0.3074192385860237, 1e-12);
   close(blackScholesMertonRho("p", S, K, t, r, sigma, q), -0.1444147380518154, 1e-12);
+});
+
+test("numerical delta uses relative spot bumps for small spot prices", () => {
+  const cases: Array<[number, number]> = [
+    [0.005, 0.01],
+    [0.0001, 0.001],
+    [1e-9, 0.001]
+  ];
+
+  for (const [S, K] of cases) {
+    const callDelta = numericalDelta("black-scholes", "c", S, K, 0.25, 0.05, 0.2);
+    const putDelta = numericalDelta("black-scholes", "p", S, K, 0.25, 0.05, 0.2);
+
+    assert.ok(Number.isFinite(callDelta), `call delta is not finite for S=${S}, K=${K}`);
+    assert.ok(Number.isFinite(putDelta), `put delta is not finite for S=${S}, K=${K}`);
+    assert.ok(callDelta >= 0 && callDelta <= 1, `call delta out of bounds: ${callDelta}`);
+    assert.ok(putDelta >= -1.1 && putDelta <= 0, `put delta out of bounds: ${putDelta}`);
+  }
+});
+
+test("numerical delta handles zero spot without dividing by zero", () => {
+  close(numericalDelta("black-scholes", "c", 0, 100, 0.25, 0.05, 0.2), 0, 0);
+  close(numericalDelta("black-scholes", "p", 0, 100, 0.25, 0.05, 0.2), -1, 0);
+});
+
+test("strike must be strictly positive", () => {
+  const assertStrikeError = (fn: () => unknown): void => {
+    assert.throws(fn, { name: "RangeError", message: /strictly positive/ });
+  };
+
+  for (const flag of ["c", "p"] as const) {
+    assertStrikeError(() => black(flag, 200, 0, 1, 0.02, 1.3));
+    assertStrikeError(() => blackScholes(flag, 200, 0, 1, 0.02, 1.3));
+    assertStrikeError(() => blackScholesMerton(flag, 200, 0, 1, 0.02, 1.3, 0.01));
+  }
+
+  assertStrikeError(() => black("c", 200, -1, 1, 0.02, 1.3));
+  assertStrikeError(() => blackScholes("c", 200, -1, 1, 0.02, 1.3));
+  assertStrikeError(() => blackScholesMerton("c", 200, -1, 1, 0.02, 1.3, 0.01));
+  assertStrikeError(() => numericalDelta("black-scholes", "c", 0, 0, 0.25, 0.05, 0.2));
 });

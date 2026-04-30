@@ -4,9 +4,10 @@ import {
   normalizedBlack as lbrNormalizedBlack,
   normalizedImpliedVolatilityFromATransformedRationalGuess
 } from "lets-be-rational";
-import { binaryFlag, OptionFlag } from "./helpers.js";
+import { assertPositiveStrike, binaryFlag, OptionFlag } from "./helpers.js";
 
 export function undiscountedBlack(F: number, K: number, sigma: number, t: number, flag: OptionFlag): number {
+  assertPositiveStrike(K);
   return lbrBlack(F, K, sigma, t, binaryFlag(flag));
 }
 
@@ -27,6 +28,7 @@ export function impliedVolatilityOfUndiscountedOptionPrice(
   t: number,
   flag: OptionFlag
 ): number {
+  assertPositiveStrike(K);
   return impliedVolatilityFromATransformedRationalGuess(undiscountedOptionPrice, F, K, t, binaryFlag(flag));
 }
 

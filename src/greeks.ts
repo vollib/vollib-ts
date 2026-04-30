@@ -2,7 +2,7 @@ import { normCdf, normPdf } from "lets-be-rational";
 import { black } from "./black.js";
 import { blackScholes } from "./blackScholes.js";
 import { blackScholesMerton } from "./blackScholesMerton.js";
-import { d1, d2, OptionFlag } from "./helpers.js";
+import { assertPositiveStrike, d1, d2, OptionFlag } from "./helpers.js";
 
 export function blackDelta(flag: OptionFlag, F: number, K: number, t: number, r: number, sigma: number): number {
   const D1 = d1(F, K, t, sigma);
@@ -117,12 +117,16 @@ export function blackScholesMertonRho(flag: OptionFlag, S: number, K: number, t:
 
 export function numericalDelta(model: "black" | "black-scholes" | "black-scholes-merton", flag: OptionFlag, S: number, K: number, t: number, r: number, sigma: number, q = 0): number {
   const dS = 0.01;
+  assertPositiveStrike(K);
+  if (S === 0) {
+    return flag === "c" ? 0 : -1;
+  }
   const price = (spot: number): number => {
     if (model === "black") return black(flag, spot, K, t, r, sigma);
     if (model === "black-scholes") return blackScholes(flag, spot, K, t, r, sigma);
     return blackScholesMerton(flag, spot, K, t, r, sigma, q);
   };
-  return (price(S + dS) - price(S - dS)) / (2 * dS);
+  return (price(S * (1 + dS)) - price(S * (1 - dS))) / (2 * S * dS);
 }
 
 export { d1, d2 };
