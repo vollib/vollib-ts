@@ -4,6 +4,23 @@ import { blackScholes } from "./blackScholes.js";
 import { blackScholesMerton } from "./blackScholesMerton.js";
 import { assertPositiveStrike, d1, d2, OptionFlag } from "./helpers.js";
 
+type ModelName = "black" | "black-scholes" | "black-scholes-merton";
+
+function priceForModel(
+  model: ModelName,
+  flag: OptionFlag,
+  S: number,
+  K: number,
+  t: number,
+  r: number,
+  sigma: number,
+  q: number
+): number {
+  if (model === "black") return black(flag, S, K, t, r, sigma);
+  if (model === "black-scholes") return blackScholes(flag, S, K, t, r, sigma);
+  return blackScholesMerton(flag, S, K, t, r, sigma, q);
+}
+
 export function blackDelta(flag: OptionFlag, F: number, K: number, t: number, r: number, sigma: number): number {
   const D1 = d1(F, K, t, sigma);
   return flag === "p" ? -Math.exp(-r * t) * normCdf(-D1) : Math.exp(-r * t) * normCdf(D1);
@@ -115,18 +132,24 @@ export function blackScholesMertonRho(flag: OptionFlag, S: number, K: number, t:
   return flag === "c" ? t * K * discount * normCdf(D2) * 0.01 : -t * K * discount * normCdf(-D2) * 0.01;
 }
 
-export function numericalDelta(model: "black" | "black-scholes" | "black-scholes-merton", flag: OptionFlag, S: number, K: number, t: number, r: number, sigma: number, q = 0): number {
+export function numericalDelta(model: ModelName, flag: OptionFlag, S: number, K: number, t: number, r: number, sigma: number, q = 0): number {
   const dS = 0.01;
   assertPositiveStrike(K);
   if (S === 0) {
     return flag === "c" ? 0 : -1;
   }
-  const price = (spot: number): number => {
-    if (model === "black") return black(flag, spot, K, t, r, sigma);
-    if (model === "black-scholes") return blackScholes(flag, spot, K, t, r, sigma);
-    return blackScholesMerton(flag, spot, K, t, r, sigma, q);
-  };
+  const price = (spot: number): number => priceForModel(model, flag, spot, K, t, r, sigma, q);
   return (price(S * (1 + dS)) - price(S * (1 - dS))) / (2 * S * dS);
+}
+
+export function numericalGamma(model: ModelName, flag: OptionFlag, S: number, K: number, t: number, r: number, sigma: number, q = 0): number {
+  const dS = 0.01;
+  assertPositiveStrike(K);
+  if (S === 0) {
+    return 0;
+  }
+  const price = (spot: number): number => priceForModel(model, flag, spot, K, t, r, sigma, q);
+  return (price(S * (1 + dS)) - 2 * price(S) + price(S * (1 - dS))) / (S * dS) ** 2;
 }
 
 export { d1, d2 };

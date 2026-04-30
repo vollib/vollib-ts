@@ -26,6 +26,7 @@ import {
   impliedVolatilityOfDiscountedOptionPrice,
   impliedVolatilityOfUndiscountedOptionPrice,
   numericalDelta,
+  numericalGamma,
   normalisedBlack,
   normalisedImpliedVolatility,
   undiscountedBlack
@@ -177,14 +178,32 @@ test("numerical delta uses relative spot bumps for small spot prices", () => {
   }
 });
 
+test("numerical gamma uses relative spot bumps for small spot prices", () => {
+  const cases: Array<[number, number]> = [
+    [0.005, 0.01],
+    [0.0001, 0.001],
+    [1e-9, 0.001]
+  ];
+
+  for (const [S, K] of cases) {
+    const callGamma = numericalGamma("black-scholes", "c", S, K, 0.25, 0.05, 0.2);
+    const putGamma = numericalGamma("black-scholes", "p", S, K, 0.25, 0.05, 0.2);
+
+    assert.ok(Number.isFinite(callGamma), `call gamma is not finite for S=${S}, K=${K}`);
+    assert.ok(Number.isFinite(putGamma), `put gamma is not finite for S=${S}, K=${K}`);
+  }
+});
+
 test("numerical delta handles zero spot without dividing by zero", () => {
   close(numericalDelta("black-scholes", "c", 0, 100, 0.25, 0.05, 0.2), 0, 0);
   close(numericalDelta("black-scholes", "p", 0, 100, 0.25, 0.05, 0.2), -1, 0);
+  close(numericalGamma("black-scholes", "c", 0, 100, 0.25, 0.05, 0.2), 0, 0);
+  close(numericalGamma("black-scholes", "p", 0, 100, 0.25, 0.05, 0.2), 0, 0);
 });
 
 test("strike must be strictly positive", () => {
   const assertStrikeError = (fn: () => unknown): void => {
-    assert.throws(fn, { name: "RangeError", message: /strictly positive/ });
+    assert.throws(fn, { name: "RangeError", message: "Strike price K must be strictly positive, got 0" });
   };
 
   for (const flag of ["c", "p"] as const) {
@@ -192,9 +211,14 @@ test("strike must be strictly positive", () => {
     assertStrikeError(() => blackScholes(flag, 200, 0, 1, 0.02, 1.3));
     assertStrikeError(() => blackScholesMerton(flag, 200, 0, 1, 0.02, 1.3, 0.01));
   }
-
-  assertStrikeError(() => black("c", 200, -1, 1, 0.02, 1.3));
-  assertStrikeError(() => blackScholes("c", 200, -1, 1, 0.02, 1.3));
-  assertStrikeError(() => blackScholesMerton("c", 200, -1, 1, 0.02, 1.3, 0.01));
   assertStrikeError(() => numericalDelta("black-scholes", "c", 0, 0, 0.25, 0.05, 0.2));
+  assertStrikeError(() => numericalGamma("black-scholes", "c", 0, 0, 0.25, 0.05, 0.2));
+
+  const assertNegativeStrikeError = (fn: () => unknown): void => {
+    assert.throws(fn, { name: "RangeError", message: "Strike price K must be strictly positive, got -1" });
+  };
+
+  assertNegativeStrikeError(() => black("c", 200, -1, 1, 0.02, 1.3));
+  assertNegativeStrikeError(() => blackScholes("c", 200, -1, 1, 0.02, 1.3));
+  assertNegativeStrikeError(() => blackScholesMerton("c", 200, -1, 1, 0.02, 1.3, 0.01));
 });
